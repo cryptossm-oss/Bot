@@ -1,5 +1,8 @@
 import asyncio
 import logging
+import threading
+import os
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from aiogram import Bot, Dispatcher, F, types
 from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -14,6 +17,19 @@ CHANNEL_ID = -1001812791576  # Таны канал ID
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 scheduler = AsyncIOScheduler(timezone="Asia/Ulaanbaatar")
+
+# --- RENDER-ИЙГ ХУУРАХ ХУУРАМЧ ВЭБ СЕРВЕР ---
+class SimpleHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is running perfectly!")
+
+def run_dummy_server():
+    port = int(os.environ.get("PORT", 8080))
+    server = HTTPServer(("0.0.0.0", port), SimpleHandler)
+    server.serve_forever()
+# ---------------------------------------------
 
 # Автомат пост оруулах функц
 async def send_auto_post():
@@ -42,7 +58,6 @@ async def send_auto_post():
             ]
         )
 
-        # Fakkicha fayyadamuu (poster.jpg)
         photo = FSInputFile("poster.jpg")
 
         await bot.send_photo(
@@ -57,7 +72,7 @@ async def send_auto_post():
         print(f"❌ Автомат пост илгээхэд алдаа гарлаа: {e}")
 
 
-# /start команд (Шууд суваг руу нийтлэх)
+# /start команд 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     keyboard = InlineKeyboardMarkup(
@@ -88,7 +103,6 @@ async def cmd_start(message: types.Message):
     )
 
     try:
-        # Fakkicha fayyadamuu (poster.jpg)
         photo = FSInputFile("poster.jpg")
         
         await bot.send_photo(
@@ -140,6 +154,9 @@ async def show_help(callback: types.CallbackQuery):
 
 
 async def main():
+    # Хуурамч серверийг асаах
+    threading.Thread(target=run_dummy_server, daemon=True).start()
+
     scheduler.add_job(send_auto_post, "interval", hours=2)
     scheduler.start()
 
